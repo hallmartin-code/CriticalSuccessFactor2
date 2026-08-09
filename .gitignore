@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.py[cod]
+_preview/
+*_onepager.pdf
+sample_deck.pdf
+sample_deck.pptx
+.venv/
+venv/

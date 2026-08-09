@@ -1,0 +1,161 @@
+# Deck → Investor One-Pager
+
+Upload an investor pitch deck (`.pdf`, `.pptx`, `.docx`); the Claude API extracts and
+analyses it, and the app returns a single-page investor summary PDF in the TEN Capital
+Network format — including the deck's **critical variable to success** and the **#1
+priority activity** for moving it.
+
+Runs two ways from the same pipeline: a CLI, and a FastAPI web app deployable to Railway.
+
+---
+
+## The document template
+
+`template.py` is the single source of truth for what a generated document contains and
+how it looks. It holds no company data — only structure and format:
+
+| Block | What it declares |
+|---|---|
+| `PALETTE` | Colour tokens (page, card, hairline, coral/amber/teal accents, text tiers) |
+| `FONT_ROLES` | `display` / `body` / `body_bold` / `mono` / `mono_bold` and their fallbacks |
+| `TYPE_SCALE` | Size, leading, and letter tracking per text role |
+| `LAYOUT` | Page margins, card radius/padding, column split, callout geometry |
+| `SECTIONS` | The prose blocks and which column each sits in |
+| `CALLOUTS` | The two accent panels (headline field, body field, label, accent colour) |
+| `FIELD_GUIDANCE` | **The fields analyzed in every deck**, and the instruction for each |
+| `ANALYSIS_RULES` | The standing rules applied to every analysis |
+| `DISCLOSURE` | The fine print printed at the foot of the card |
+
+Both halves of the app read from it: `analyzer.py` builds the JSON schema and prompt from
+`FIELD_GUIDANCE` + `ANALYSIS_RULES`, and `renderer.py` draws from `SECTIONS` + `CALLOUTS`.
+
+**Adding a field is one edit.** Append to `FIELD_GUIDANCE`, then reference the key from a
+`Section` or `Callout`. It flows into the model's schema, the prompt, and the page with no
+other changes. `template.field_keys()` raises at import time if a referenced field has no
+guidance entry, so the two can't drift apart.
+
+### Document structure produced
+
+```
+  ◐ TEN CAPITAL / NETWORK                     brand lockup
+┌──────────────────────────────────────────┐
+│ ══════════ coral → amber → teal ═════════ │  accent rule
+│ ● INVESTOR ONE-PAGER                      │  eyebrow
+│ Company Name                              │  title      ← company_name
+│ One-line description of the company.      │  subtitle   ← tagline
+│ ───────────────────────────────────────── │
+│ PROBLEM              │ TEAM               │
+│ SOLUTION             │ THE ASK            │  sections
+│ TRACTION & KEY …     │ ┌────────────────┐ │
+│ MARKET OPPORTUNITY   │ │ ⚡ CRITICAL VAR │ │  amber callout
+│ BUSINESS MODEL       │ └────────────────┘ │
+│                      │ ┌────────────────┐ │
+│                      │ │ 🎯 TOP PRIORITY│ │  teal callout
+│                      │ └────────────────┘ │
+│ ───────────────────────────────────────── │
+│ disclosure                                │
+└──────────────────────────────────────────┘
+   Deck Analysis  1  Compiled on … by TEN Capital Network  ◐
+```
+
+The card is measured before it is drawn: it wraps its content rather than stretching, and
+the whole stack is centred vertically. If an analysis runs long, each column shrinks to fit
+— the output is always exactly one page.
+
+---
+
+## Files
+
+| File | Role |
+|---|---|
+| `template.py` | Document structure, format tokens, and analyzed fields |
+| `extractor.py` | PDF / PPTX / DOCX text extraction, one entry per page or slide |
+| `analyzer.py` | Claude API call, schema-enforced JSON, one retry on bad JSON |
+| `renderer.py` | ReportLab rendering; `render_onepager_bytes()` for the web path |
+| `pitch_to_onepager.py` | CLI entry point |
+| `webapp.py` | FastAPI app: upload page, `/api/generate`, `/healthz` |
+| `web/index.html` | Upload page (matches the PDF's design system) |
+| `make_sample_deck.py` | Generates `sample_deck.pdf` for smoke testing |
+| `fonts/` | Optional drop-in brand fonts — see `fonts/README.md` |
+
+---
+
+## Local use
+
+```bash
+pip install -r requirements.txt
+cp .env.example .env        # then paste your key into .env
+```
+
+**CLI:**
+
+```bash
+python make_sample_deck.py            # optional: creates sample_deck.pdf
+python pitch_to_onepager.py sample_deck.pdf
+```
+
+**Web app:**
+
+```bash
+uvicorn webapp:app --reload --port 8000
+# open http://127.0.0.1:8000
+```
+
+---
+
+## Environment variables
+
+| Variable | Required | Default | Purpose |
+|---|---|---|---|
+| `ANTHROPIC_API_KEY` | **yes** | — | Key from [console.anthropic.com](https://console.anthropic.com/settings/keys) |
+| `ANTHROPIC_MODEL` | no | `claude-opus-5` | Any current model ID, e.g. `claude-sonnet-5` for lower cost |
+| `MAX_UPLOAD_MB` | no | `25` | Upload size cap |
+| `APP_USERNAME` / `APP_PASSWORD` | no | unset | Set **both** to put the site behind HTTP basic auth |
+| `LOG_LEVEL` | no | `INFO` | Standard logging level |
+
+---
+
+## Deploying to Railway
+
+1. **Push this folder to a GitHub repo.** `.gitignore` already excludes `.env`, so your key
+   will not be committed.
+2. In Railway: **New Project → Deploy from GitHub repo**, and pick the repo. Nixpacks
+   detects Python, installs `requirements.txt`, and uses the start command in
+   `railway.json`. No Dockerfile needed.
+3. **Variables** tab → add `ANTHROPIC_API_KEY`. Add `APP_USERNAME` and `APP_PASSWORD` too
+   unless you intend the URL to be public (see the warning below). `PORT` is injected by
+   Railway; don't set it.
+4. **Settings → Networking → Generate Domain** to get a public URL.
+5. Railway health-checks `/healthz`, which also reports whether the key is configured —
+   hit it first if generation fails.
+
+Config already in the repo: `railway.json` (start command + health check), `Procfile`
+(same command, for any Procfile-based host), `.python-version` pinning 3.12.
+
+> ⚠️ **An open URL spends your Anthropic credits.** Anyone who finds the domain can run
+> analyses on your key. Set `APP_USERNAME` + `APP_PASSWORD` — the browser handles the
+> login prompt, and `/healthz` stays open so Railway's health check still passes.
+
+**Notes on the deployed environment**
+
+- Uploads live in memory and a temp file for the duration of the request, and are deleted
+  in a `finally` block. Nothing is persisted — Railway's filesystem is ephemeral anyway.
+- A run takes roughly 15–60s depending on deck length. That is well inside Railway's
+  request timeout, but it does mean one worker is busy for that time; raise replicas if
+  you expect concurrent users.
+- Brand fonts and the emoji font are not installed on the Railway image. Without them the
+  PDF falls back to Helvetica/Courier and drops the ⚡/🎯 markers. To get exact brand type,
+  commit the TTFs into `fonts/` — see `fonts/README.md`.
+
+---
+
+## Model choice
+
+Defaults to `claude-opus-5`. The response is constrained by a JSON schema
+(`output_config.format`), so malformed JSON is close to impossible; the single retry on a
+parse failure is a backstop. Refusals, rate limits, auth failures, and token-limit
+truncation each surface as a distinct message rather than a generic parse error.
+
+Set `ANTHROPIC_MODEL=claude-sonnet-5` to cut cost per run at some loss of analytical depth
+on the critical-variable judgement, which is the part of the output that benefits most from
+the stronger model.
