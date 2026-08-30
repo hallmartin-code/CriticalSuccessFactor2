@@ -1,0 +1,304 @@
+{
+  "company_name": {
+    "value": "Verdant Grid",
+    "confidence": 1.0,
+    "source_slides": [
+      1
+    ],
+    "note": null
+  },
+  "tagline": {
+    "value": "Forecasting software that keeps distributed energy grids stable.",
+    "confidence": 1.0,
+    "source_slides": [
+      1
+    ],
+    "note": null
+  },
+  "website": {
+    "value": null,
+    "confidence": 0.0,
+    "source_slides": [],
+    "note": null
+  },
+  "hq_location": {
+    "value": null,
+    "confidence": 0.0,
+    "source_slides": [],
+    "note": null
+  },
+  "founded_year": {
+    "value": null,
+    "confidence": 0.0,
+    "source_slides": [],
+    "note": null
+  },
+  "sector": {
+    "value": "Energy / Climate Tech",
+    "confidence": 0.7,
+    "source_slides": [
+      1,
+      3
+    ],
+    "note": "Inferred from grid forecasting SaaS positioning"
+  },
+  "sub_sector": {
+    "value": "Grid forecasting SaaS for electric distribution utilities",
+    "confidence": 0.8,
+    "source_slides": [
+      3,
+      6
+    ],
+    "note": null
+  },
+  "stage": {
+    "value": "Seed",
+    "confidence": 1.0,
+    "source_slides": [
+      1,
+      8
+    ],
+    "note": null
+  },
+  "raise_amount_usd": {
+    "value": 4000000,
+    "confidence": 1.0,
+    "source_slides": [
+      8
+    ],
+    "note": null
+  },
+  "pre_money_valuation_usd": {
+    "value": null,
+    "confidence": 0.0,
+    "source_slides": [],
+    "note": null
+  },
+  "instrument": {
+    "value": null,
+    "confidence": 0.0,
+    "source_slides": [],
+    "note": null
+  },
+  "amount_committed_usd": {
+    "value": 1600000,
+    "confidence": 1.0,
+    "source_slides": [
+      8
+    ],
+    "note": "Lead investor not yet named"
+  },
+  "min_check_usd": {
+    "value": null,
+    "confidence": 0.0,
+    "source_slides": [],
+    "note": null
+  },
+  "close_date": {
+    "value": null,
+    "confidence": 0.0,
+    "source_slides": [],
+    "note": null
+  },
+  "problem": {
+    "value": "US utilities curtailed 8.2 TWh of renewables in 2025 (est. $1.4B cost) because they cannot forecast distributed solar and battery output hour-by-hour; legacy SCADA forecasting tools were built for centralised thermal plants.",
+    "confidence": 0.95,
+    "source_slides": [
+      2
+    ],
+    "note": null
+  },
+  "solution": {
+    "value": "Ingests smart-meter and inverter telemetry to produce 15-minute-resolution per-feeder generation forecasts, delivered as a read-only SaaS layer alongside existing SCADA - no utility hardware, no control-plane integration, no NERC CIP scope.",
+    "confidence": 0.95,
+    "source_slides": [
+      3
+    ],
+    "note": null
+  },
+  "business_model": {
+    "value": "Annual SaaS subscription priced per feeder under management; average contract value $155K; land-and-expand from one district to full service territory; 81% gross margin.",
+    "confidence": 0.95,
+    "source_slides": [
+      6
+    ],
+    "note": null
+  },
+  "go_to_market": {
+    "value": "Direct sales to utilities with land-and-expand within service territories; pilot pipeline sourced via the EPRI distribution working group; hiring 5 utility-sales reps.",
+    "confidence": 0.7,
+    "source_slides": [
+      4,
+      6,
+      8
+    ],
+    "note": null
+  },
+  "use_of_funds": {
+    "value": [
+      "5 utility-sales hires (45%)",
+      "Forecasting model R&D (35%)",
+      "SOC 2 Type II and utility security review (20%)"
+    ],
+    "confidence": 1.0,
+    "source_slides": [
+      8
+    ],
+    "note": null
+  },
+  "traction_metrics": {
+    "value": [
+      {
+        "label": "ARR",
+        "value": "$620K",
+        "period": "current",
+        "source_slide": 4
+      },
+      {
+        "label": "ARR twelve months ago",
+        "value": "$180K",
+        "period": "prior year",
+        "source_slide": 4
+      },
+      {
+        "label": "Paying utility customers",
+        "value": "4 (two on multi-year contracts)",
+        "period": null,
+        "source_slide": 4
+      },
+      {
+        "label": "Pilot pipeline",
+        "value": "11 utilities via EPRI distribution working group",
+        "period": null,
+        "source_slide": 4
+      },
+      {
+        "label": "Net revenue retention",
+        "value": "128%",
+        "period": null,
+        "source_slide": 4
+      },
+      {
+        "label": "Gross margin",
+        "value": "81%",
+        "period": null,
+        "source_slide": 6
+      }
+    ],
+    "confidence": 0.95,
+    "source_slides": [
+      4,
+      6
+    ],
+    "note": null
+  },
+  "tam_usd": {
+    "value": 750000000,
+    "confidence": 0.95,
+    "source_slides": [
+      5
+    ],
+    "note": null
+  },
+  "sam_usd": {
+    "value": 105000000,
+    "confidence": 0.95,
+    "source_slides": [
+      5
+    ],
+    "note": null
+  },
+  "som_usd": {
+    "value": null,
+    "confidence": 0.0,
+    "source_slides": [],
+    "note": null
+  },
+  "market_note": {
+    "value": "TAM $750M bottom-up (3,000 US distribution utilities x $250K ACV); SAM $105M (420 utilities with >5% DG penetration). TAM ACV assumption exceeds current $155K ACV.",
+    "confidence": 0.9,
+    "source_slides": [
+      5,
+      6
+    ],
+    "note": null
+  },
+  "team": {
+    "value": [
+      {
+        "name": "Dr. Amara Oyelaran",
+        "role": "CEO",
+        "background": "9 yrs PJM Interconnection leading day-ahead forecasting; PhD power systems, Georgia Tech"
+      },
+      {
+        "name": "Ben Kaur",
+        "role": "CTO",
+        "background": "Former staff engineer on Tesla Autobidder"
+      }
+    ],
+    "confidence": 0.95,
+    "source_slides": [
+      7
+    ],
+    "note": "Unnamed advisor: former Chief Grid Officer of a top-10 US IOU"
+  },
+  "competitors": {
+    "value": null,
+    "confidence": 0.0,
+    "source_slides": [],
+    "note": null
+  },
+  "differentiation": {
+    "value": "Mean absolute error 4.1% vs 11.7% incumbent baseline; read-only deployment avoids NERC CIP scope and control-plane integration.",
+    "confidence": 0.9,
+    "source_slides": [
+      3
+    ],
+    "note": null
+  },
+  "key_strengths": {
+    "value": [
+      "Measured forecast accuracy edge: 4.1% MAE vs 11.7% incumbent baseline",
+      "3.4x ARR growth to $620K with 128% NRR and zero logo churn",
+      "Domain-native founders: 9 yrs PJM day-ahead forecasting; Tesla Autobidder engineering"
+    ],
+    "confidence": 0.0,
+    "source_slides": [],
+    "note": null
+  },
+  "key_risks": {
+    "value": [
+      "TAM assumes $250K ACV vs actual $155K average, overstating $750M by ~60%",
+      "Revenue concentrated in four utility customers; one loss materially hits $620K ARR",
+      "Read-only, no-control-plane design may cap value capture and invite SCADA vendor bundling"
+    ],
+    "confidence": 0.0,
+    "source_slides": [],
+    "note": null
+  },
+  "missing_information": {
+    "value": [
+      "Named customers, contract terms, and revenue concentration across the four utilities",
+      "Burn rate, current cash, CAC and utility sales-cycle length supporting 24-month runway to $3M ARR",
+      "Instrument, pre-money valuation, cap table, and identity of the $1.6M committed investors",
+      "Independent validation of the 4.1% vs 11.7% MAE benchmark and which incumbent it was tested against",
+      "Conversion history from EPRI pilot pipeline to paid contracts; founding year, HQ, headcount"
+    ],
+    "confidence": 0.0,
+    "source_slides": [],
+    "note": null
+  },
+  "provenance": {
+    "source_filename": "sample_deck.pdf",
+    "source_page_count": 8,
+    "extracted_at": "2026-08-20T21:35:25.571306Z",
+    "model": "claude-opus-5",
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "estimated_cost_usd": null,
+    "cached": true,
+    "ingest_warnings": [],
+    "citation_warnings": [],
+    "truncations": []
+  }
+}
