@@ -16,7 +16,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import BackgroundTasks, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
+from fastapi.staticfiles import StaticFiles
 
 import notifier
 import template
@@ -31,7 +32,17 @@ logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
 
 MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_MB", "25")) * 1024 * 1024
 CHUNK_BYTES = 1 << 20
-INDEX_PATH = Path(__file__).with_name("web") / "index.html"
+WEB_DIR = Path(__file__).with_name("web")
+INDEX_PATH = WEB_DIR / "index.html"
+
+# Brand icons, served from the site root because that is where browsers and iOS
+# look for them regardless of what the page markup says.
+ICON_FILES = {
+    "/favicon.ico": "image/x-icon",
+    "/favicon.svg": "image/svg+xml",
+    "/apple-touch-icon.png": "image/png",
+}
+ICON_CACHE_CONTROL = "public, max-age=86400"
 
 APP_USERNAME = os.environ.get("APP_USERNAME", "")
 APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
@@ -44,6 +55,9 @@ app = FastAPI(
 )
 
 
+app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
+
+
 @app.middleware("http")
 async def require_basic_auth(request: Request, call_next):
     """Gate every route behind HTTP basic auth when APP_PASSWORD is configured.
@@ -51,7 +65,7 @@ async def require_basic_auth(request: Request, call_next):
     A public URL that spends Anthropic credits on each request is worth locking
     down; with no password set the app stays open and this is a no-op.
     """
-    if not APP_PASSWORD or request.url.path == "/healthz":
+    if not APP_PASSWORD or request.url.path in ("/healthz", *ICON_FILES):
         return await call_next(request)
 
     header = request.headers.get("authorization", "")
@@ -77,6 +91,19 @@ async def require_basic_auth(request: Request, call_next):
 async def index() -> HTMLResponse:
     """Serve the upload page."""
     return HTMLResponse(INDEX_PATH.read_text(encoding="utf-8"))
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+@app.get("/favicon.svg", include_in_schema=False)
+@app.get("/apple-touch-icon.png", include_in_schema=False)
+async def icon(request: Request) -> FileResponse:
+    """Serve a brand icon from the site root."""
+    path = request.url.path
+    return FileResponse(
+        WEB_DIR / path.lstrip("/"),
+        media_type=ICON_FILES[path],
+        headers={"Cache-Control": ICON_CACHE_CONTROL},
+    )
 
 
 @app.get("/healthz")

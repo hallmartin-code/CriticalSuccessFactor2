@@ -1,0 +1,8 @@
+<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="TEN Capital Network">
+  <path d="M41.20 17.16 A34 34 0 0 0 18.05 61.63" stroke="#EE5A4E" stroke-width="13" stroke-linecap="round"/>
+  <path d="M80.81 64.37 A34 34 0 0 0 61.63 18.05" stroke="#F3A22A" stroke-width="13" stroke-linecap="round"/>
+  <path d="M22.15 69.50 A34 34 0 0 0 71.85 76.04" stroke="#35BEBB" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="35.28" cy="41.50" r="8.5" fill="#EE5A4E"/>
+  <circle cx="65.97" cy="44.19" r="8.5" fill="#F3A22A"/>
+  <circle cx="48.52" cy="66.94" r="8.5" fill="#35BEBB"/>
+</svg>

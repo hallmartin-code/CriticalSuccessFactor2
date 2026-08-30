@@ -74,8 +74,10 @@ the whole stack is centred vertically. If an analysis runs long, each column shr
 | `renderer.py` | ReportLab rendering; `render_onepager_bytes()` for the web path |
 | `notifier.py` | Emails each finished analysis (summary + PDF) via the Resend API |
 | `pitch_to_onepager.py` | CLI entry point |
-| `webapp.py` | FastAPI app: upload page, `/api/generate`, `/healthz` |
+| `webapp.py` | FastAPI app: upload page, `/api/generate`, `/healthz`, brand icons |
 | `web/index.html` | Upload page (matches the PDF's design system) |
+| `web/favicon.svg` | Brand mark — the primary favicon, and the source of the raster icons |
+| `make_favicon.py` | Regenerates `web/favicon.ico` and `web/apple-touch-icon.png` |
 | `make_sample_deck.py` | Generates `sample_deck.pdf` for smoke testing |
 | `fonts/` | Optional drop-in brand fonts — see `fonts/README.md` |
 
@@ -151,6 +153,27 @@ Config already in the repo: `railway.json` (start command + health check), `Proc
 - Brand fonts and the emoji font are not installed on the Railway image. Without them the
   PDF falls back to Helvetica/Courier and drops the ⚡/🎯 markers. To get exact brand type,
   commit the TTFs into `fonts/` — see `fonts/README.md`.
+
+---
+
+## Brand icons
+
+`web/` is the served public directory. The favicon is the TEN Capital mark — the same three
+arcs and dots the upload page draws inline, in the same coral/amber/teal palette.
+
+| File | Used for |
+|---|---|
+| `web/favicon.svg` | Primary favicon; scales to any tab or bookmark size |
+| `web/favicon.ico` | 16/32/48/64 px fallback, and the bare `/favicon.ico` browsers request |
+| `web/apple-touch-icon.png` | 180 px iOS home-screen icon, on white (iOS flattens transparency) |
+
+All three are served from the site root, and the whole directory is also mounted at
+`/static`. They are exempt from HTTP basic auth so the tab icon still appears on the login
+prompt. The `.ico` and `.png` are checked in; regenerate them only if the mark changes:
+
+```bash
+python make_favicon.py
+```
 
 ---
 
