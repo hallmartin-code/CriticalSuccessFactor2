@@ -7,9 +7,10 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+import notifier
 from analyzer import AnalysisError, analyze_deck
 from extractor import ExtractionError, extract_text
-from renderer import render_onepager
+from renderer import output_filename, render_onepager
 
 
 def main(argv: list[str]) -> int:
@@ -30,6 +31,16 @@ def main(argv: list[str]) -> int:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
     print(f"Wrote {output}")
+    if notifier.is_configured():
+        print("Emailing results...")
+        sent = notifier.notify_analysis(
+            analysis,
+            output.read_bytes(),
+            filename=output_filename(analysis),
+            source_name=deck.name,
+            origin="cli",
+        )
+        print(f"Emailed to {', '.join(notifier.recipients())}" if sent else "Email not sent.")
     return 0
 
 

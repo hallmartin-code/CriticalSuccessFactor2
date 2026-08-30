@@ -72,6 +72,7 @@ the whole stack is centred vertically. If an analysis runs long, each column shr
 | `extractor.py` | PDF / PPTX / DOCX text extraction, one entry per page or slide |
 | `analyzer.py` | Claude API call, schema-enforced JSON, one retry on bad JSON |
 | `renderer.py` | ReportLab rendering; `render_onepager_bytes()` for the web path |
+| `notifier.py` | Emails each finished analysis (summary + PDF) via the Resend API |
 | `pitch_to_onepager.py` | CLI entry point |
 | `webapp.py` | FastAPI app: upload page, `/api/generate`, `/healthz` |
 | `web/index.html` | Upload page (matches the PDF's design system) |
@@ -112,6 +113,10 @@ uvicorn webapp:app --reload --port 8000
 | `MAX_UPLOAD_MB` | no | `25` | Upload size cap |
 | `APP_USERNAME` / `APP_PASSWORD` | no | unset | Set **both** to put the site behind HTTP basic auth |
 | `LOG_LEVEL` | no | `INFO` | Standard logging level |
+| `RESEND_API_KEY` | no | unset | [Resend](https://resend.com/api-keys) key. **Unset = results emails off.** |
+| `NOTIFY_EMAIL_TO` | no | `Info@tencapital.group` | Recipient(s); comma-separate for several |
+| `NOTIFY_EMAIL_FROM` | no | `TEN Capital Network Analyzer <onepager@tencapital.group>` | Must be on a domain verified at [resend.com/domains](https://resend.com/domains) |
+| `NOTIFY_EMAIL_REPLY_TO` | no | unset | Optional reply-to address |
 
 ---
 
@@ -122,9 +127,9 @@ uvicorn webapp:app --reload --port 8000
 2. In Railway: **New Project → Deploy from GitHub repo**, and pick the repo. Nixpacks
    detects Python, installs `requirements.txt`, and uses the start command in
    `railway.json`. No Dockerfile needed.
-3. **Variables** tab → add `ANTHROPIC_API_KEY`. Add `APP_USERNAME` and `APP_PASSWORD` too
-   unless you intend the URL to be public (see the warning below). `PORT` is injected by
-   Railway; don't set it.
+3. **Variables** tab → add `ANTHROPIC_API_KEY` and `RESEND_API_KEY`. Add `APP_USERNAME` and
+   `APP_PASSWORD` too unless you intend the URL to be public (see the warning below). `PORT`
+   is injected by Railway; don't set it.
 4. **Settings → Networking → Generate Domain** to get a public URL.
 5. Railway health-checks `/healthz`, which also reports whether the key is configured —
    hit it first if generation fails.
@@ -146,6 +151,28 @@ Config already in the repo: `railway.json` (start command + health check), `Proc
 - Brand fonts and the emoji font are not installed on the Railway image. Without them the
   PDF falls back to Helvetica/Courier and drops the ⚡/🎯 markers. To get exact brand type,
   commit the TTFs into `fonts/` — see `fonts/README.md`.
+
+---
+
+## Results emails
+
+Every completed generation is emailed to `NOTIFY_EMAIL_TO` (default `Info@tencapital.group`)
+with the full analysis in the body and the rendered one-pager attached. It fires from both
+the CLI and the web app.
+
+- **Off by default.** No `RESEND_API_KEY` means no email, and nothing else changes.
+- **Never blocks a generation.** In the web app the send runs as a FastAPI background task
+  *after* the PDF response is returned; any Resend failure is logged as a warning and the
+  download is unaffected. Rejected uploads (wrong type, too large, unreadable) send nothing.
+- **Sender domain must be verified.** `NOTIFY_EMAIL_FROM` has to sit on a domain verified at
+  [resend.com/domains](https://resend.com/domains), or Resend returns 403.
+- **Body follows `template.py`.** Adding a section or callout there adds it to the email too —
+  no second field list to maintain.
+- `GET /healthz` reports `results_email_configured` so you can confirm the key reached the
+  deployment.
+
+Attachments over 25 MB are dropped and the summary is sent on its own, keeping the request
+under Resend's 40 MB limit.
 
 ---
 

@@ -14,10 +14,11 @@ import tempfile
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import BackgroundTasks, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 
+import notifier
 import template
 from analyzer import AnalysisError, analyze_deck
 from extractor import SUPPORTED_SUFFIXES, ExtractionError, extract_text
@@ -86,15 +87,22 @@ async def healthz() -> JSONResponse:
             "status": "ok",
             "anthropic_api_key_configured": bool(os.environ.get("ANTHROPIC_API_KEY")),
             "model": os.environ.get("ANTHROPIC_MODEL", "claude-opus-5"),
+            "results_email_configured": notifier.is_configured(),
         }
     )
 
 
 @app.post("/api/generate")
-async def generate(deck: UploadFile = File(...)) -> Response:
+async def generate(
+    background_tasks: BackgroundTasks, deck: UploadFile = File(...)
+) -> Response:
     """Analyze an uploaded deck and return the rendered one-pager PDF.
 
+    A copy of the results is emailed to the configured recipient after the
+    response is sent, so a mail failure never delays or breaks the download.
+
     Args:
+        background_tasks: Injected by FastAPI; carries the results email.
         deck: Multipart upload of a ``.pdf``, ``.pptx``, or ``.docx`` file.
 
     Returns:
@@ -113,8 +121,17 @@ async def generate(deck: UploadFile = File(...)) -> Response:
     if not payload:
         raise HTTPException(400, "That file is empty.")
 
-    pdf_bytes, filename = await run_in_threadpool(
-        _build_onepager, payload, suffix, deck.filename or f"deck{suffix}"
+    source_name = deck.filename or f"deck{suffix}"
+    pdf_bytes, filename, analysis = await run_in_threadpool(
+        _build_onepager, payload, suffix, source_name
+    )
+    background_tasks.add_task(
+        notifier.notify_analysis,
+        analysis,
+        pdf_bytes,
+        filename=filename,
+        source_name=source_name,
+        origin="web",
     )
     return Response(
         content=pdf_bytes,
@@ -141,8 +158,14 @@ async def _read_capped(upload: UploadFile) -> bytes:
     return b"".join(chunks)
 
 
-def _build_onepager(payload: bytes, suffix: str, source_name: str) -> tuple[bytes, str]:
-    """Run the blocking pipeline on a temp copy of the upload; return PDF bytes and filename."""
+def _build_onepager(
+    payload: bytes, suffix: str, source_name: str
+) -> tuple[bytes, str, dict[str, str]]:
+    """Run the blocking pipeline on a temp copy of the upload.
+
+    Returns:
+        The rendered PDF bytes, its download filename, and the analysis behind it.
+    """
     handle, temp_name = tempfile.mkstemp(suffix=suffix)
     temp_path = Path(temp_name)
     try:
@@ -160,4 +183,4 @@ def _build_onepager(payload: bytes, suffix: str, source_name: str) -> tuple[byte
         temp_path.unlink(missing_ok=True)
 
     logger.info("generated one-pager for %s", analysis.get(template.TITLE_KEY, "unknown"))
-    return render_onepager_bytes(analysis), output_filename(analysis)
+    return render_onepager_bytes(analysis), output_filename(analysis), analysis
