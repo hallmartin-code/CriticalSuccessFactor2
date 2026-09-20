@@ -133,8 +133,53 @@ uvicorn webapp:app --reload --port 8000
    `APP_PASSWORD` too unless you intend the URL to be public (see the warning below). `PORT`
    is injected by Railway; don't set it.
 4. **Settings → Networking → Generate Domain** to get a public URL.
-5. Railway health-checks `/healthz`, which also reports whether the key is configured —
-   hit it first if generation fails.
+5. Railway health-checks `/healthz`, which also reports **which commit is live** —
+   hit it first if a change seems to be missing (see below).
+
+### Deploying without the GitHub connection
+
+Railway's repo connection is a single point of failure: if it is missing or broken, Railway
+keeps serving the last successful build and pushes silently have no effect. `.github/workflows/deploy.yml`
+removes that dependency by deploying *from* GitHub Actions with a Railway token, so the push
+itself drives the deploy.
+
+One-time setup:
+
+1. Railway → **Project Settings → Tokens** → create a project token scoped to the
+   `production` environment.
+2. GitHub → repo **Settings → Secrets and variables → Actions**:
+   - **Secret** `RAILWAY_TOKEN` — the token from step 1.
+   - **Variable** `RAILWAY_SERVICE` — the service name as it appears in Railway.
+   - **Variable** `APP_URL` — e.g. `https://criticalsuccessfactor2-production.up.railway.app`
+     (optional; enables the post-deploy check).
+
+Every push to `main` then deploys, and the workflow polls `/healthz` until the live `commit`
+matches the pushed SHA — so a deploy that silently leaves an old build running **fails the
+workflow** instead of going unnoticed. Run it by hand from the Actions tab with
+**Run workflow**.
+
+Manual fallback, from a checkout of `main`:
+
+```bash
+npm i -g @railway/cli
+railway login
+railway link          # pick the project and service
+railway up
+```
+
+### Which build is live?
+
+```bash
+curl -s https://<your-app>/healthz
+```
+
+```json
+{"status":"ok","commit":"a996f11...","commit_short":"a996f11","environment":"production", ...}
+```
+
+`commit` comes from Railway's injected `RAILWAY_GIT_COMMIT_SHA`, or from `APP_COMMIT_SHA` if
+you set it explicitly (CLI uploads do not get the injected value). Compare it against
+`git rev-parse HEAD` — if they differ, the deploy did not take, and nothing you pushed is live.
 
 Config already in the repo: `railway.json` (start command + health check), `Procfile`
 (same command, for any Procfile-based host), `.python-version` pinning 3.12.

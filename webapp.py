@@ -44,6 +44,15 @@ ICON_FILES = {
 }
 ICON_CACHE_CONTROL = "public, max-age=86400"
 
+# Which build is actually running. Railway injects the git SHA on repo-sourced
+# deploys; APP_COMMIT_SHA covers CLI uploads, where it is absent. Reported by
+# /healthz so a single request tells you whether a push really went live.
+BUILD_COMMIT = (
+    os.environ.get("APP_COMMIT_SHA")
+    or os.environ.get("RAILWAY_GIT_COMMIT_SHA")
+    or "unknown"
+)
+
 APP_USERNAME = os.environ.get("APP_USERNAME", "")
 APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
 
@@ -108,10 +117,13 @@ async def icon(request: Request) -> FileResponse:
 
 @app.get("/healthz")
 async def healthz() -> JSONResponse:
-    """Liveness probe that also reports whether the API key is configured."""
+    """Liveness probe reporting the running build and what it has configured."""
     return JSONResponse(
         {
             "status": "ok",
+            "commit": BUILD_COMMIT,
+            "commit_short": BUILD_COMMIT[:7],
+            "environment": os.environ.get("RAILWAY_ENVIRONMENT_NAME", "local"),
             "anthropic_api_key_configured": bool(os.environ.get("ANTHROPIC_API_KEY")),
             "model": os.environ.get("ANTHROPIC_MODEL", "claude-opus-5"),
             "results_email_configured": notifier.is_configured(),

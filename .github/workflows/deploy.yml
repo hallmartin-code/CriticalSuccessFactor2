@@ -1,0 +1,58 @@
+name: Deploy to Railway
+
+# Pushes the deploy to Railway instead of waiting for Railway to notice a commit.
+# This runs on GitHub's side with a Railway project token, so it works whether or
+# not the service has a GitHub source connected — a broken or missing connection
+# can no longer strand production on an old build.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # lets you redeploy the current main by hand
+
+concurrency:
+  group: railway-deploy
+  cancel-in-progress: false # never interrupt a deploy that is mid-flight
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install the Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway up --service "${{ vars.RAILWAY_SERVICE }}" --ci
+
+      # Railway reports the build as finished before the new container is
+      # necessarily serving, so confirm the commit we just pushed is the one
+      # answering. Without this the workflow can go green over a stale build,
+      # which is exactly the failure this whole workflow exists to prevent.
+      - name: Verify the deployed commit
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          if [ -z "$APP_URL" ]; then
+            echo "::warning::APP_URL variable not set — skipping deploy verification."
+            exit 0
+          fi
+          for attempt in $(seq 1 30); do
+            live=$(curl -fsS --max-time 10 "$APP_URL/healthz" | jq -r '.commit // "unknown"') || live=""
+            if [ "$live" = "$GITHUB_SHA" ]; then
+              echo "Live build is $GITHUB_SHA."
+              exit 0
+            fi
+            echo "attempt $attempt: live=${live:-unreachable} expected=$GITHUB_SHA"
+            sleep 10
+          done
+          echo "::error::$APP_URL is still not serving $GITHUB_SHA after 5 minutes."
+          exit 1
