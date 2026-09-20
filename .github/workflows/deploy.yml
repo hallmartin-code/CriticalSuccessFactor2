@@ -1,14 +1,20 @@
 name: Deploy to Railway
 
-# Pushes the deploy to Railway instead of waiting for Railway to notice a commit.
-# This runs on GitHub's side with a Railway project token, so it works whether or
-# not the service has a GitHub source connected — a broken or missing connection
-# can no longer strand production on an old build.
+# Two jobs in one workflow:
+#
+#   deploy — pushes the deploy to Railway with a project token, so a missing or
+#            broken GitHub source connection cannot strand production on an old
+#            build. Skipped when RAILWAY_TOKEN is not set, which is the right
+#            state while Railway's own connection is deploying the repo.
+#
+#   verify — confirms the pushed commit is the one actually answering, whichever
+#            mechanism deployed it. This is the part that matters: production
+#            silently served a stale build for days because nothing checked.
 
 on:
   push:
     branches: [main]
-  workflow_dispatch: # lets you redeploy the current main by hand
+  workflow_dispatch: # redeploy the current main by hand
 
 concurrency:
   group: railway-deploy
@@ -19,40 +25,61 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - name: Is a Railway token configured?
+        id: gate
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          if [ -n "$RAILWAY_TOKEN" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::RAILWAY_TOKEN not set — skipping the push-deploy. Relying on Railway's own GitHub connection; the verify job still checks the result."
+          fi
+
       - uses: actions/checkout@v4
+        if: steps.gate.outputs.configured == 'true'
 
       - uses: actions/setup-node@v4
+        if: steps.gate.outputs.configured == 'true'
         with:
           node-version: "20"
 
       - name: Install the Railway CLI
+        if: steps.gate.outputs.configured == 'true'
         run: npm install -g @railway/cli
 
       - name: Deploy
+        if: steps.gate.outputs.configured == 'true'
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: railway up --service "${{ vars.RAILWAY_SERVICE }}" --ci
 
-      # Railway reports the build as finished before the new container is
-      # necessarily serving, so confirm the commit we just pushed is the one
-      # answering. Without this the workflow can go green over a stale build,
-      # which is exactly the failure this whole workflow exists to prevent.
-      - name: Verify the deployed commit
+  verify:
+    needs: deploy
+    if: always() && vars.APP_URL != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # Railway reports a build as finished before the new container is
+      # necessarily serving, so poll rather than checking once.
+      - name: Wait for the live build to match this commit
         env:
           APP_URL: ${{ vars.APP_URL }}
         run: |
-          if [ -z "$APP_URL" ]; then
-            echo "::warning::APP_URL variable not set — skipping deploy verification."
-            exit 0
-          fi
-          for attempt in $(seq 1 30); do
+          for attempt in $(seq 1 40); do
             live=$(curl -fsS --max-time 10 "$APP_URL/healthz" | jq -r '.commit // "unknown"') || live=""
-            if [ "$live" = "$GITHUB_SHA" ]; then
-              echo "Live build is $GITHUB_SHA."
-              exit 0
-            fi
-            echo "attempt $attempt: live=${live:-unreachable} expected=$GITHUB_SHA"
-            sleep 10
+            case "$live" in
+              "$GITHUB_SHA")
+                echo "Live build is $GITHUB_SHA."
+                exit 0
+                ;;
+              unknown)
+                echo "::warning::$APP_URL reports no commit — it is running a build from before commit reporting existed."
+                ;;
+            esac
+            echo "attempt $attempt/40: live=${live:-unreachable} expected=$GITHUB_SHA"
+            sleep 15
           done
-          echo "::error::$APP_URL is still not serving $GITHUB_SHA after 5 minutes."
+          echo "::error::$APP_URL is still not serving $GITHUB_SHA after 10 minutes. The deploy did not take."
           exit 1

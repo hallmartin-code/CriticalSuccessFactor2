@@ -153,10 +153,12 @@ One-time setup:
    - **Variable** `APP_URL` — e.g. `https://criticalsuccessfactor2-production.up.railway.app`
      (optional; enables the post-deploy check).
 
-Every push to `main` then deploys, and the workflow polls `/healthz` until the live `commit`
-matches the pushed SHA — so a deploy that silently leaves an old build running **fails the
-workflow** instead of going unnoticed. Run it by hand from the Actions tab with
-**Run workflow**.
+The token is optional. With it unset the push-deploy is skipped and Railway's own GitHub
+connection does the deploying — but the **verify** job still runs on every push, polling
+`/healthz` until the live `commit` matches the pushed SHA. A deploy that silently leaves an
+old build running **fails the workflow** instead of going unnoticed either way. Set
+`RAILWAY_TOKEN` when you want the push itself to drive the deploy. Run it by hand from the
+Actions tab with **Run workflow**.
 
 Manual fallback, from a checkout of `main`:
 
