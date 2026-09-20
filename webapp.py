@@ -48,7 +48,7 @@ APP_USERNAME = os.environ.get("APP_USERNAME", "")
 APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
 
 app = FastAPI(
-    title=f"{template.ORGANIZATION} — Deck Analyzer",
+    title=f"{template.ORGANIZATION} — Critical Success Factor",
     docs_url=None,
     redoc_url=None,
     openapi_url=None,
@@ -83,7 +83,7 @@ async def require_basic_auth(request: Request, call_next):
     return Response(
         status_code=401,
         content="Authentication required.",
-        headers={"WWW-Authenticate": 'Basic realm="Deck Analyzer"'},
+        headers={"WWW-Authenticate": 'Basic realm="Critical Success Factor"'},
     )
 
 

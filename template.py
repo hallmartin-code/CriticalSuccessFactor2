@@ -131,7 +131,7 @@ CALLOUTS: tuple[Callout, ...] = (
     Callout(
         headline_key="critical_variable",
         body_key="critical_variable_rationale",
-        label="Critical Variable to Success",
+        label="Critical Success Factor",
         accent="amber",
         marker="⚡",
     ),
